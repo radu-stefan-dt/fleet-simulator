@@ -23,6 +23,7 @@
 package cli
 
 import (
+	"os"
 	"strings"
 )
 
@@ -31,6 +32,14 @@ func parseFlagEnvironment(env string) string {
 	env = strings.TrimSuffix(env, "/")
 	return env
 }
+
+func parseFlagToken(val string, env bool) string {
+	if env {
+		return os.Getenv(val)
+	}
+	return val
+}
+
 func parseFlagNumFleets(nf int) int {
 	switch {
 	case nf < 1:
