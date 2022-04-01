@@ -24,7 +24,9 @@ package util
 
 import (
 	"fmt"
+	"math/rand"
 	"os"
+	"time"
 )
 
 var locations = [10]string{
@@ -46,4 +48,21 @@ func PrintError(err error) {
 
 func Locations() [10]string {
 	return locations
+}
+
+func RandomLetter() rune {
+	time.Sleep(time.Nanosecond)
+	return 'A' + rune(rand.New(rand.NewSource(time.Now().UnixNano())).Intn(26))
+}
+
+func GenerateRegNumber() string {
+	var reg string
+	reg += string(RandomLetter())
+	reg += string(RandomLetter())
+	reg += fmt.Sprintf("%d", rand.Intn(99))
+	reg += " "
+	reg += string(RandomLetter())
+	reg += string(RandomLetter())
+	reg += string(RandomLetter())
+	return reg
 }
