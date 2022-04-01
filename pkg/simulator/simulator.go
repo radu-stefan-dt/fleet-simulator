@@ -34,7 +34,7 @@ import (
 	"github.com/radu-stefan-dt/fleet-simulator/pkg/util"
 )
 
-func StartSimulation(dtc rest.DTClient, numFleets int, numTaxis string) error {
+func StartSimulation(dtc rest.DTClient, numFleets int, numTaxis string, verbose bool) error {
 	for i := 0; i < numFleets; i++ {
 		f := fleet.NewFleet(
 			rand.New(rand.NewSource(time.Now().UnixNano())).Intn(899_999)+100_000,
@@ -42,66 +42,33 @@ func StartSimulation(dtc rest.DTClient, numFleets int, numTaxis string) error {
 			parseNumTaxis(numTaxis),
 		)
 		f.InitialiseFleet()
-		go sendFleetMetrics(dtc, f)
-		go sendTaxiMetrics(dtc, f)
+		go sendFleetMetrics(dtc, f, verbose)
+		go sendTaxiMetrics(dtc, f, verbose)
 	}
 
 	select {}
 }
 
-func sendFleetMetrics(dtc rest.DTClient, f fleet.Fleet) {
-	var (
-		metricData string
-		dimensions string
-		id         string = fmt.Sprintf("%d", f.GetId())
-		loc        string = f.GetLocation()
-	)
+func sendFleetMetrics(dtc rest.DTClient, f fleet.Fleet, verbose bool) {
 	for {
-		var (
-			metrics = map[string]string{
-				"fleet.cars.available": fmt.Sprintf("%d", f.GetAvailableCars()),
-				"fleet.cars.busy":      fmt.Sprintf("%d", f.GetBusyCars()),
-				"fleet.cars.total":     fmt.Sprintf("%d", f.GetTotalCars()),
-				"fleet.queue":          fmt.Sprintf("%d", f.GetCustomerQueue()),
-			}
-		)
-
-		dimensions = "fleetid=" + id + ",location=" + loc
-		for mKey, mVal := range metrics {
-			metricData += mKey + "," + dimensions + " " + mVal + "\n"
+		mintData := f.ToMintData()
+		dtc.PostMetrics(mintData)
+		fmt.Println(time.Now().Format("02.01.2006 - 15:04:05"), ": Sent fleet metrics for fleet", f.GetId())
+		if verbose {
+			fmt.Println(mintData)
 		}
-
-		dtc.PostMetrics(metricData)
-		fmt.Println(time.Now().Format("02.01.2006 - 15:04:05"), ": Sent fleet metrics for fleet", id)
 		time.Sleep(2 * time.Minute)
 	}
 }
-func sendTaxiMetrics(dtc rest.DTClient, f fleet.Fleet) {
+func sendTaxiMetrics(dtc rest.DTClient, f fleet.Fleet, verbose bool) {
 	for {
 		for _, t := range f.GetTaxis() {
-			var (
-				metricData string
-				dimensions string
-				id         string = fmt.Sprintf("%d", t.GetId())
-				class      string = t.GetClass()
-				fleetId    string = fmt.Sprintf("%d", t.GetFleetID())
-			)
-
-			var (
-				metrics = map[string]string{
-					"taxi.speed":                 fmt.Sprintf("%f", t.GetSpeed()),
-					"taxi.engine.temperature":    fmt.Sprintf("%f", t.GetEngineTemp()),
-					"taxi.engine.daystorevision": fmt.Sprintf("%d", t.GetDaysToRevision()),
-				}
-			)
-
-			dimensions = "taxiid=" + id + ",class=" + class + ",fleetid=" + fleetId
-			for mKey, mVal := range metrics {
-				metricData += mKey + "," + dimensions + " " + mVal + "\n"
+			mintData := t.ToMintData()
+			dtc.PostMetrics(mintData)
+			fmt.Println(time.Now().Format("02.01.2006 - 15:04:05"), ": Sent taxi metrics for taxi", t.GetId())
+			if verbose {
+				fmt.Println(mintData)
 			}
-
-			dtc.PostMetrics(metricData)
-			fmt.Println(time.Now().Format("02.01.2006 - 15:04:05"), ": Sent taxi metrics for taxi", id)
 		}
 		time.Sleep(1 * time.Minute)
 	}
