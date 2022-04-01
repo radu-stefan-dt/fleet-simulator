@@ -20,53 +20,26 @@
  * SOFTWARE.
  **/
 
-package cli
+package constants
 
-import (
-	"bufio"
-	"fmt"
-	"os"
-	"strings"
+const (
+	MetricPrefix = "custom.app.fleet-simulator."
+	Version      = "0.0.2"
+	Title        = "Interactive Fleet Simulator"
+	ShortHelp    = "This is an interactive app. Type 'help' for usage information and examples."
+	LongHelp     = `
+	Interactive Fleet Simulator
+	---------------------------
+	This tool is used to simulate generic entities, their relationships, and metrics. The scenario simulates
+	a fleet of smart taxies which generate metrics that are then pushed out to a Dynatrace tenant via API.
 
-	"github.com/radu-stefan-dt/fleet-simulator/pkg/constants"
-	"github.com/radu-stefan-dt/fleet-simulator/pkg/util"
+	Commands:
+		start - starts the simulation, with given parameters
+		stop  - stops any running simulation
+		help  - prints this help message
+		exit  - stops any running simulation and exits the app
+	
+	Additional 'help' is available for each command.
+	`
+	InputStr = "> "
 )
-
-func NewCli() {
-	fmt.Println("Welcome to " + constants.Title + " " + constants.Version)
-	fmt.Println(constants.ShortHelp)
-	for {
-		fmt.Print(constants.InputStr)
-		reader := bufio.NewReader(os.Stdin)
-		cmdString, err := reader.ReadString('\n')
-		if err != nil {
-			util.PrintError(err)
-		}
-		cmdFields := strings.Fields(strings.TrimSuffix(cmdString, "\n"))
-		cmd := cmdFields[0]
-		args := cmdFields[1:]
-
-		switch cmd {
-		case "help":
-			help()
-		case "start":
-			startCommand(args)
-		case "stop":
-			stopCommand()
-		case "exit":
-			exit()
-		}
-	}
-}
-
-func help() {
-	fmt.Fprintln(os.Stdout, constants.LongHelp)
-}
-
-func stopCommand() {
-	fmt.Fprintln(os.Stdout, "You ran the STOP command")
-}
-
-func exit() {
-	os.Exit(0)
-}
