@@ -33,8 +33,8 @@ import (
 )
 
 const (
-	protocol  = "https://"
-	ingestAPI = "/api/v2/metrics/ingest"
+	protocol        = "https://"
+	metricIngestAPI = "/api/v2/metrics/ingest"
 )
 
 type DTClient interface {
@@ -73,7 +73,7 @@ func (dtc DTClientImpl) PostMetrics(data string) {
 
 func NewDTClient(tenant, token string) DTClient {
 	return &DTClientImpl{
-		baseURL: protocol + tenant + ingestAPI,
+		baseURL: protocol + tenant + metricIngestAPI,
 		token:   token,
 	}
 }
