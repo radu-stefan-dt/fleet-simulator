@@ -56,7 +56,7 @@ func parseFlagNumFleets(nf int) int {
 	}
 }
 
-func parseNumTaxis(nt string) int {
+func parseFlagNumTaxis(nt string) int {
 	if strings.Contains(nt, "-") {
 		splits := strings.Split(nt, "-")
 		min, err := strconv.ParseInt(splits[0], 0, 0)

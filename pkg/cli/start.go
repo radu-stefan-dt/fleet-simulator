@@ -92,7 +92,7 @@ func startCommand(args []string) {
 	if taxisFlag == "" {
 		taxis = 5
 	} else {
-		taxis = parseNumTaxis(taxisFlag)
+		taxis = parseFlagNumTaxis(taxisFlag)
 	}
 	client := rest.NewDTClient(environment, token)
 	simulator.StartSimulation(client, int(fleets), taxis, verbose)
