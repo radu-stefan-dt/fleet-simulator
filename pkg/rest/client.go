@@ -35,10 +35,12 @@ import (
 const (
 	protocol        = "https://"
 	metricIngestAPI = "/api/v2/metrics/ingest"
+	logsIngestAPI   = "/api/v2/logs/ingest"
 )
 
 type DTClient interface {
 	PostMetrics(string)
+	PostLogEvent([]byte)
 }
 
 type DTClientImpl struct {
@@ -49,7 +51,7 @@ type DTClientImpl struct {
 func (dtc DTClientImpl) PostMetrics(data string) {
 	payload := bytes.NewBuffer([]byte(data))
 
-	req, err := http.NewRequest("POST", dtc.baseURL, payload)
+	req, err := http.NewRequest("POST", dtc.baseURL+metricIngestAPI, payload)
 	if err != nil {
 		util.PrintError(err)
 	}
@@ -71,9 +73,33 @@ func (dtc DTClientImpl) PostMetrics(data string) {
 	}
 }
 
+func (dtc DTClientImpl) PostLogEvent(content []byte) {
+	payload := bytes.NewBuffer([]byte(content))
+
+	req, err := http.NewRequest("POST", dtc.baseURL+logsIngestAPI, payload)
+	if err != nil {
+		util.PrintError(err)
+	}
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Authorization", "Api-Token "+dtc.token)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		util.PrintError(err)
+	}
+	if resp.StatusCode != 204 {
+		fmt.Println("Got unexpected response code:", resp.StatusCode, "(", resp.StatusCode, ")")
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			util.PrintError(err)
+		}
+		fmt.Println(string(body))
+	}
+}
+
 func NewDTClient(tenant, token string) DTClient {
 	return &DTClientImpl{
-		baseURL: protocol + tenant + metricIngestAPI,
+		baseURL: protocol + tenant,
 		token:   token,
 	}
 }
