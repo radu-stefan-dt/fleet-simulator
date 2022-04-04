@@ -23,12 +23,14 @@
 package fleet
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"strings"
 	"time"
 
 	"github.com/radu-stefan-dt/fleet-simulator/pkg/constants"
+	"github.com/radu-stefan-dt/fleet-simulator/pkg/models"
 )
 
 type Taxi interface {
@@ -40,6 +42,7 @@ type Taxi interface {
 	GetDaysToRevision() int
 	ToMintDimensions() string
 	ToMintData() string
+	CreateAcceptCustomerEvent() []byte
 }
 type taxiImpl struct {
 	id             int
@@ -84,8 +87,23 @@ func (t taxiImpl) ToMintData() string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("%s%s,%s %f\n", constants.MetricPrefix, "taxi.speed", dimensions, t.GetSpeed()))
 	sb.WriteString(fmt.Sprintf("%s%s,%s %f\n", constants.MetricPrefix, "taxi.engine.temperature", dimensions, t.GetEngineTemp()))
-	sb.WriteString(fmt.Sprintf("%s%s,%s %d\n", constants.MetricPrefix, "taxi.speed.daystorevision", dimensions, t.GetDaysToRevision()))
+	sb.WriteString(fmt.Sprintf("%s%s,%s %d\n", constants.MetricPrefix, "taxi.engine.daystorevision", dimensions, t.GetDaysToRevision()))
 	return sb.String()
+}
+func (t taxiImpl) CreateAcceptCustomerEvent() []byte {
+	eventRaw := models.EventIngest{
+		EventType:      "CUSTOM_INFO",
+		Title:          "Accepted request for customer",
+		StartTime:      time.Now().UTC().UnixMilli(),
+		EndTime:        time.Now().UTC().UnixMilli(),
+		EntitySelector: fmt.Sprintf("type(easytaxis:smart_taxi),TaxiID(%d)", t.GetId()),
+		Properties: map[string]string{
+			"TaxiID":  fmt.Sprintf("%d", t.GetId()),
+			"FleetID": fmt.Sprintf("%d", t.GetFleetID()),
+		},
+	}
+	eventEncoded, _ := json.Marshal(eventRaw)
+	return eventEncoded
 }
 
 func NewTaxi(id int, class string, fleet int, reg string) Taxi {

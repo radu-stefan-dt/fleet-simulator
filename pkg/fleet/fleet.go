@@ -23,12 +23,14 @@
 package fleet
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"strings"
 	"time"
 
 	"github.com/radu-stefan-dt/fleet-simulator/pkg/constants"
+	"github.com/radu-stefan-dt/fleet-simulator/pkg/models"
 	"github.com/radu-stefan-dt/fleet-simulator/pkg/util"
 )
 
@@ -47,6 +49,8 @@ type Fleet interface {
 	InitialiseFleet()
 	ToMintDimensions() string
 	ToMintData() string
+	CreateTrafficInfoEvent() []byte
+	CreateCustomerRequestEvent() []byte
 }
 
 type fleetImpl struct {
@@ -91,6 +95,36 @@ func (f fleetImpl) ToMintData() string {
 	sb.WriteString(fmt.Sprintf("%s%s,%s %d\n", constants.MetricPrefix, "fleet.cars.total", dimensions, f.GetTotalCars()))
 	sb.WriteString(fmt.Sprintf("%s%s,%s %d\n", constants.MetricPrefix, "fleet.queue", dimensions, f.GetCustomerQueue()))
 	return sb.String()
+}
+func (f fleetImpl) CreateTrafficInfoEvent() []byte {
+	eventRaw := models.EventIngest{
+		EventType:      "CUSTOM_INFO",
+		Title:          "Received updated traffic information",
+		StartTime:      time.Now().UTC().UnixMilli(),
+		EndTime:        time.Now().UTC().UnixMilli(),
+		EntitySelector: fmt.Sprintf("type(easytaxis:smart_fleet),FleetID(%d)", f.GetId()),
+		Properties: map[string]string{
+			"FleetID":        fmt.Sprintf("%d", f.GetId()),
+			"Location":       f.GetLocation(),
+			"TrafficDetails": "No accidents. Maintain normal route operation",
+		},
+	}
+	eventEncoded, _ := json.Marshal(eventRaw)
+	return eventEncoded
+}
+func (f fleetImpl) CreateCustomerRequestEvent() []byte {
+	eventRaw := models.EventIngest{
+		EventType:      "CUSTOM_INFO",
+		Title:          "New customer booking requested",
+		StartTime:      time.Now().UTC().UnixMilli(),
+		EndTime:        time.Now().UTC().UnixMilli(),
+		EntitySelector: fmt.Sprintf("type(easytaxis:smart_fleet),FleetID(%d)", f.GetId()),
+		Properties: map[string]string{
+			"Destination": fmt.Sprintf("%f x %f", util.RandomCoord(), util.RandomCoord()),
+		},
+	}
+	eventEncoded, _ := json.Marshal(eventRaw)
+	return eventEncoded
 }
 
 func (f *fleetImpl) MakeCarBusy() {
