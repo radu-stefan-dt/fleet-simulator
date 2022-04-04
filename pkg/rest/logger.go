@@ -9,11 +9,12 @@ import (
 )
 
 type LogContent struct {
-	Timestamp int64  `json:"timestamp"`
-	Level     string `json:"level"`
-	Message   string `json:"content"`
-	FleetId   string `json:"fleet.id"`
-	TaxiId    string `json:"taxi.id"`
+	Timestamp    int64  `json:"timestamp"`
+	Level        string `json:"level"`
+	Message      string `json:"content"`
+	FleetId      string `json:"fleet.id"`
+	TaxiId       string `json:"taxi.id"`
+	CustomDevice string `json:"dt.entity.custom_device"`
 }
 
 // Handler implementation
@@ -34,23 +35,16 @@ func (h *Handler) HandleLog(e *log.Entry) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	var logContent LogContent
 	// build content
+	logContent := LogContent{
+		Timestamp:    e.Timestamp.UTC().UnixMilli(),
+		Level:        e.Level.String(),
+		Message:      e.Message,
+		FleetId:      fmt.Sprintf("%v", e.Fields.Get("fleet.id")),
+		CustomDevice: fmt.Sprintf("%v", e.Fields.Get("custom.device")),
+	}
 	if e.Fields.Get("taxi.id") != "" {
-		logContent = LogContent{
-			Timestamp: e.Timestamp.UTC().UnixMilli(),
-			Level:     e.Level.String(),
-			Message:   e.Message,
-			TaxiId:    fmt.Sprintf("%v", e.Fields.Get("taxi.id")),
-			FleetId:   fmt.Sprintf("%v", e.Fields.Get("fleet.id")),
-		}
-	} else {
-		logContent = LogContent{
-			Timestamp: e.Timestamp.UTC().UnixMilli(),
-			Level:     e.Level.String(),
-			Message:   e.Message,
-			FleetId:   fmt.Sprintf("%v", e.Fields.Get("fleet.id")),
-		}
+		logContent.TaxiId = fmt.Sprintf("%v", e.Fields.Get("taxi.id"))
 	}
 	content, _ := json.Marshal(logContent)
 
