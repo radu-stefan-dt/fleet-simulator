@@ -23,8 +23,13 @@
 package cli
 
 import (
+	"math/rand"
 	"os"
+	"strconv"
 	"strings"
+	"time"
+
+	"github.com/radu-stefan-dt/fleet-simulator/pkg/util"
 )
 
 func parseFlagEnvironment(env string) string {
@@ -49,4 +54,24 @@ func parseFlagNumFleets(nf int) int {
 	default:
 		return nf
 	}
+}
+
+func parseNumTaxis(nt string) int {
+	if strings.Contains(nt, "-") {
+		splits := strings.Split(nt, "-")
+		min, err := strconv.ParseInt(splits[0], 0, 0)
+		if err != nil {
+			util.PrintError(err)
+		}
+		max, err := strconv.ParseInt(splits[1], 0, 0)
+		if err != nil {
+			util.PrintError(err)
+		}
+		return rand.New(rand.NewSource(time.Now().UnixNano())).Intn(int(max-min)) + int(min)
+	}
+	num, err := strconv.ParseInt(nt, 0, 0)
+	if err != nil {
+		util.PrintError(err)
+	}
+	return int(num)
 }

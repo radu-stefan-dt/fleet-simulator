@@ -25,8 +25,6 @@ package simulator
 import (
 	"fmt"
 	"math/rand"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/apex/log"
@@ -35,12 +33,12 @@ import (
 	"github.com/radu-stefan-dt/fleet-simulator/pkg/util"
 )
 
-func StartSimulation(dtc rest.DTClient, numFleets int, numTaxis string, verbose bool) error {
+func StartSimulation(dtc rest.DTClient, numFleets int, numTaxis int, verbose bool) error {
 	for i := 0; i < numFleets; i++ {
 		f := fleet.NewFleet(
 			rand.New(rand.NewSource(time.Now().UnixNano())).Intn(899_999)+100_000,
 			util.Locations()[i],
-			parseNumTaxis(numTaxis),
+			numTaxis,
 		)
 		f.InitialiseFleet()
 		go sendFleetMetrics(dtc, f, verbose)
@@ -80,24 +78,4 @@ func sendTaxiMetrics(dtc rest.DTClient, f fleet.Fleet, verbose bool) {
 		}
 		time.Sleep(1 * time.Minute)
 	}
-}
-
-func parseNumTaxis(nt string) int {
-	if strings.Contains(nt, "-") {
-		splits := strings.Split(nt, "-")
-		min, err := strconv.ParseInt(splits[0], 0, 0)
-		if err != nil {
-			util.PrintError(err)
-		}
-		max, err := strconv.ParseInt(splits[1], 0, 0)
-		if err != nil {
-			util.PrintError(err)
-		}
-		return rand.New(rand.NewSource(time.Now().UnixNano())).Intn(int(max-min)) + int(min)
-	}
-	num, err := strconv.ParseInt(nt, 0, 0)
-	if err != nil {
-		util.PrintError(err)
-	}
-	return int(num)
 }

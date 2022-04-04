@@ -54,7 +54,8 @@ func startCommand(args []string) {
 	var (
 		environment string
 		token       string
-		taxis       string
+		taxisFlag   string
+		taxis       int
 		fleets      int
 	)
 	verbose := false
@@ -80,7 +81,7 @@ func startCommand(args []string) {
 			}
 			fleets = parseFlagNumFleets(nfleets)
 		case "--taxisPerFleet", "-tpf":
-			taxis = args[i+1]
+			taxisFlag = args[i+1]
 		case "--verbose", "-v":
 			verbose = true
 		}
@@ -88,8 +89,10 @@ func startCommand(args []string) {
 	if fleets == 0 {
 		fleets = 2
 	}
-	if taxis == "" {
-		taxis = "5"
+	if taxisFlag == "" {
+		taxis = 5
+	} else {
+		taxis = parseNumTaxis(taxisFlag)
 	}
 	client := rest.NewDTClient(environment, token)
 	simulator.StartSimulation(client, int(fleets), taxis, verbose)
