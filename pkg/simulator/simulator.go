@@ -24,7 +24,6 @@ package simulator
 
 import (
 	"fmt"
-	"math/rand"
 	"time"
 
 	"github.com/apex/log"
@@ -34,15 +33,25 @@ import (
 )
 
 func StartSimulation(dtc rest.DTClient, numFleets int, numTaxis int, verbose bool) error {
+	idBase := 100_000
+	var fleets []fleet.Fleet
+
 	for i := 0; i < numFleets; i++ {
 		f := fleet.NewFleet(
-			rand.New(rand.NewSource(time.Now().UnixNano())).Intn(899_999)+100_000,
+			idBase+i,
+			// rand.New(rand.NewSource(time.Now().UnixNano())).Intn(899_999)+100_000,
 			util.Locations()[i],
 			numTaxis,
 		)
 		f.InitialiseFleet()
+		fleets = append(fleets, f)
+	}
+
+	for _, f := range fleets {
 		go sendFleetMetrics(dtc, f, verbose)
 		go sendTaxiMetrics(dtc, f, verbose)
+		go sendFleetEvents(dtc, f)
+		go sendTaxiEvents(dtc, f)
 	}
 
 	select {}
@@ -51,7 +60,12 @@ func StartSimulation(dtc rest.DTClient, numFleets int, numTaxis int, verbose boo
 func sendFleetMetrics(dtc rest.DTClient, f fleet.Fleet, verbose bool) {
 	log.SetHandler(rest.New(dtc))
 	log.WithFields(log.Fields{"fleet.id": f.GetId()}).Info("sending fleet metrics")
+	entityID, _ := dtc.GetEntityId(fmt.Sprintf("type(easytaxis:smart_fleet),FleetID(%d)", f.GetId()))
 	for {
+		log.WithFields(log.Fields{
+			"fleet.id":      f.GetId(),
+			"custom.device": entityID,
+		}).Info("sending fleet metrics")
 		mintData := f.ToMintData()
 		dtc.PostMetrics(mintData)
 		fmt.Println(time.Now().Format("02.01.2006 - 15:04:05"), ": Sent fleet metrics for fleet", f.GetId())
@@ -65,9 +79,11 @@ func sendTaxiMetrics(dtc rest.DTClient, f fleet.Fleet, verbose bool) {
 	log.SetHandler(rest.New(dtc))
 	for {
 		for _, t := range f.GetTaxis() {
+			entityID, _ := dtc.GetEntityId(fmt.Sprintf("type(easytaxis:smart_taxi),TaxiID(%d)", t.GetId()))
 			log.WithFields(log.Fields{
-				"fleet.id": f.GetId(),
-				"taxi.id":  t.GetId(),
+				"fleet.id":      f.GetId(),
+				"taxi.id":       t.GetId(),
+				"custom.device": entityID,
 			}).Info("sending taxi metrics")
 			mintData := t.ToMintData()
 			dtc.PostMetrics(mintData)
@@ -77,5 +93,20 @@ func sendTaxiMetrics(dtc rest.DTClient, f fleet.Fleet, verbose bool) {
 			}
 		}
 		time.Sleep(1 * time.Minute)
+	}
+}
+func sendFleetEvents(dtc rest.DTClient, f fleet.Fleet) {
+	for {
+		dtc.PostEvent(f.CreateTrafficInfoEvent())
+		time.Sleep(10 * time.Minute)
+	}
+}
+func sendTaxiEvents(dtc rest.DTClient, f fleet.Fleet) {
+	for {
+		for _, t := range f.GetTaxis() {
+			dtc.PostEvent(f.CreateCustomerRequestEvent())
+			dtc.PostEvent(t.CreateAcceptCustomerEvent())
+		}
+		time.Sleep(5 * time.Minute)
 	}
 }
