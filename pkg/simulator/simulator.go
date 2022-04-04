@@ -29,6 +29,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/apex/log"
 	"github.com/radu-stefan-dt/fleet-simulator/pkg/fleet"
 	"github.com/radu-stefan-dt/fleet-simulator/pkg/rest"
 	"github.com/radu-stefan-dt/fleet-simulator/pkg/util"
@@ -50,6 +51,8 @@ func StartSimulation(dtc rest.DTClient, numFleets int, numTaxis string, verbose 
 }
 
 func sendFleetMetrics(dtc rest.DTClient, f fleet.Fleet, verbose bool) {
+	log.SetHandler(rest.New(dtc))
+	log.WithFields(log.Fields{"fleet.id": f.GetId()}).Info("sending fleet metrics")
 	for {
 		mintData := f.ToMintData()
 		dtc.PostMetrics(mintData)
@@ -61,8 +64,13 @@ func sendFleetMetrics(dtc rest.DTClient, f fleet.Fleet, verbose bool) {
 	}
 }
 func sendTaxiMetrics(dtc rest.DTClient, f fleet.Fleet, verbose bool) {
+	log.SetHandler(rest.New(dtc))
 	for {
 		for _, t := range f.GetTaxis() {
+			log.WithFields(log.Fields{
+				"fleet.id": f.GetId(),
+				"taxi.id":  t.GetId(),
+			}).Info("sending taxi metrics")
 			mintData := t.ToMintData()
 			dtc.PostMetrics(mintData)
 			fmt.Println(time.Now().Format("02.01.2006 - 15:04:05"), ": Sent taxi metrics for taxi", t.GetId())
