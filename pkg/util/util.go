@@ -66,3 +66,9 @@ func GenerateRegNumber() string {
 	reg += string(RandomLetter())
 	return reg
 }
+
+func RandomCoord() float64 {
+	rand.Seed(time.Now().UnixNano())
+	time.Sleep(time.Nanosecond)
+	return 20 + rand.Float64()*80
+}
