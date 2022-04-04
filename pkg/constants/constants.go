@@ -23,7 +23,7 @@
 package constants
 
 const (
-	MetricPrefix = "custom.app.fleet-simulator."
+	MetricPrefix = "custom.easytaxis."
 	Version      = "0.0.2"
 	Title        = "Interactive Fleet Simulator"
 	ShortHelp    = "This is an interactive app. Type 'help' for usage information and examples."
