@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/radu-stefan-dt/fleet-simulator/pkg/rest"
 	"github.com/radu-stefan-dt/fleet-simulator/pkg/simulator"
@@ -34,13 +35,16 @@ import (
 
 const (
 	startCommandHelp = `
-	Command starts up the fleet simulation. Format is "start [arguments]"
+	Command starts up the fleet simulation. Format is "start [arguments] [flags]"
 	
 	Arguments:
 		--environment, -e	- Dynatrace SaaS or Managed tenant and domain. You don't need https:// or the ending slash
-		--token, -t		- Dynatrace API Token with Metrics (V2) permission
+		--token, -t		- Dynatrace API Token with Metrics (V2) permission or the name of an environment variable (if -ev is used)
 		--fleets, -f		- Number of fleets to simulate (max. 10) (default: 2)
 		--taxisPerFleet, -tpf	- Number of taxis per fleet to simulate. Ranges supported using the 'min-max' format for more variety (default: 5)
+	Flags:
+	    --env-vars, -ev		- Token is taken from an environment variable specified with -t
+		--verbose, -v		- Prints out every single metric line sent
 	
 	Example:
 		start -e abc123.live.dynatrace.com -t abcdefg1234567 -f 3 -tpf 2-5`
@@ -50,9 +54,11 @@ func startCommand(args []string) {
 	var (
 		environment string
 		token       string
-		taxis       string
+		taxisFlag   string
+		taxis       int
 		fleets      int
 	)
+	verbose := false
 	if len(args) == 0 {
 		fmt.Fprintln(os.Stderr, "ERROR: No arguments provided. Type 'help' to see usage.")
 		return
@@ -66,7 +72,8 @@ func startCommand(args []string) {
 		case "--environment", "-e":
 			environment = parseFlagEnvironment(args[i+1])
 		case "--token", "-t":
-			token = args[i+1]
+			env := strings.Contains(strings.Join(args, ""), "-ev") || strings.Contains(strings.Join(args, ""), "--env-var")
+			token = parseFlagToken(args[i+1], env)
 		case "--fleet", "-f":
 			nfleets, err := strconv.Atoi(args[i+1])
 			if err != nil {
@@ -74,17 +81,21 @@ func startCommand(args []string) {
 			}
 			fleets = parseFlagNumFleets(nfleets)
 		case "--taxisPerFleet", "-tpf":
-			taxis = args[i+1]
+			taxisFlag = args[i+1]
+		case "--verbose", "-v":
+			verbose = true
 		}
 	}
 	if fleets == 0 {
 		fleets = 2
 	}
-	if taxis == "" {
-		taxis = "5"
+	if taxisFlag == "" {
+		taxis = 5
+	} else {
+		taxis = parseFlagNumTaxis(taxisFlag)
 	}
 	client := rest.NewDTClient(environment, token)
-	simulator.StartSimulation(client, int(fleets), taxis)
+	simulator.StartSimulation(client, int(fleets), taxis, verbose)
 }
 
 func printStartCommandHelp() {

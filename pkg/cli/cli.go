@@ -28,14 +28,15 @@ import (
 	"os"
 	"strings"
 
+	"github.com/radu-stefan-dt/fleet-simulator/pkg/constants"
 	"github.com/radu-stefan-dt/fleet-simulator/pkg/util"
 )
 
 func NewCli() {
-	fmt.Println("Welcome to " + title + " " + version)
-	fmt.Println(shortHelp)
+	fmt.Println("Welcome to " + constants.Title + " " + constants.Version)
+	fmt.Println(constants.ShortHelp)
 	for {
-		fmt.Print(inputStr)
+		fmt.Print(constants.InputStr)
 		reader := bufio.NewReader(os.Stdin)
 		cmdString, err := reader.ReadString('\n')
 		if err != nil {
@@ -59,7 +60,7 @@ func NewCli() {
 }
 
 func help() {
-	fmt.Fprintln(os.Stdout, longHelp)
+	fmt.Fprintln(os.Stdout, constants.LongHelp)
 }
 
 func stopCommand() {

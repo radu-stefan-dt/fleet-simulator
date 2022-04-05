@@ -20,58 +20,38 @@
  * SOFTWARE.
  **/
 
-package cli
+package models
 
-import (
-	"math/rand"
-	"os"
-	"strconv"
-	"strings"
-	"time"
-
-	"github.com/radu-stefan-dt/fleet-simulator/pkg/util"
+const (
+	Protocol        = "https://"
+	MetricIngestAPI = "/api/v2/metrics/ingest"
+	LogsIngestAPI   = "/api/v2/logs/ingest"
+	EventsIngestAPI = "/api/v2/events/ingest"
+	EntitiesAPI     = "/api/v2/entities"
 )
 
-func parseFlagEnvironment(env string) string {
-	env = strings.TrimPrefix(env, "https://")
-	env = strings.TrimSuffix(env, "/")
-	return env
+var ApiResponses = map[int]bool{
+	200: true,
+	201: true,
+	202: true,
+	204: true,
 }
 
-func parseFlagToken(val string, env bool) string {
-	if env {
-		return os.Getenv(val)
-	}
-	return val
+type EventIngest struct {
+	EventType      string            `json:"eventType"`
+	Title          string            `json:"title"`
+	StartTime      int64             `json:"startTime"`
+	EndTime        int64             `json:"endTime"`
+	EntitySelector string            `json:"entitySelector"`
+	Properties     map[string]string `json:"properties"`
 }
 
-func parseFlagNumFleets(nf int) int {
-	switch {
-	case nf < 1:
-		return 1
-	case nf > 10:
-		return 10
-	default:
-		return nf
-	}
+type EntitiesAPIResponse struct {
+	TotalCount int `json:"totalCount"`
+	Entities   []MonitoredEntity
 }
 
-func parseFlagNumTaxis(nt string) int {
-	if strings.Contains(nt, "-") {
-		splits := strings.Split(nt, "-")
-		min, err := strconv.ParseInt(splits[0], 0, 0)
-		if err != nil {
-			util.PrintError(err)
-		}
-		max, err := strconv.ParseInt(splits[1], 0, 0)
-		if err != nil {
-			util.PrintError(err)
-		}
-		return rand.New(rand.NewSource(time.Now().UnixNano())).Intn(int(max-min)) + int(min)
-	}
-	num, err := strconv.ParseInt(nt, 0, 0)
-	if err != nil {
-		util.PrintError(err)
-	}
-	return int(num)
+type MonitoredEntity struct {
+	EntityID    string `json:"entityId"`
+	DisplayName string `json:"displayName"`
 }

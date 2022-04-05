@@ -23,8 +23,14 @@
 package fleet
 
 import (
+	"encoding/json"
+	"fmt"
 	"math/rand"
+	"strings"
 	"time"
+
+	"github.com/radu-stefan-dt/fleet-simulator/pkg/constants"
+	"github.com/radu-stefan-dt/fleet-simulator/pkg/models"
 )
 
 type Taxi interface {
@@ -34,10 +40,14 @@ type Taxi interface {
 	GetSpeed() float64
 	GetEngineTemp() float64
 	GetDaysToRevision() int
+	ToMintDimensions() string
+	ToMintData() string
+	CreateAcceptCustomerEvent() []byte
 }
 type taxiImpl struct {
 	id             int
 	class          string
+	registration   string
 	fleetID        int
 	speed          float64
 	engineTemp     float64
@@ -63,11 +73,40 @@ func (t taxiImpl) GetEngineTemp() float64 {
 	i := rand.New(rand.NewSource(time.Now().UnixNano())).Intn(20) + 90
 	return d + float64(i)
 }
+func (t taxiImpl) GetRegistration() string {
+	return t.registration
+}
 func (t taxiImpl) GetDaysToRevision() int {
 	return t.daysToRevision
 }
+func (t taxiImpl) ToMintDimensions() string {
+	return fmt.Sprintf("taxi.id=\"%d\",taxi.class=\"%s\",taxi.registration=\"%s\",fleet.id=\"%d\"", t.GetId(), t.GetClass(), t.GetRegistration(), t.GetFleetID())
+}
+func (t taxiImpl) ToMintData() string {
+	dimensions := t.ToMintDimensions()
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("%s%s,%s %f\n", constants.MetricPrefix, "taxi.speed", dimensions, t.GetSpeed()))
+	sb.WriteString(fmt.Sprintf("%s%s,%s %f\n", constants.MetricPrefix, "taxi.engine.temperature", dimensions, t.GetEngineTemp()))
+	sb.WriteString(fmt.Sprintf("%s%s,%s %d\n", constants.MetricPrefix, "taxi.engine.daystorevision", dimensions, t.GetDaysToRevision()))
+	return sb.String()
+}
+func (t taxiImpl) CreateAcceptCustomerEvent() []byte {
+	eventRaw := models.EventIngest{
+		EventType:      "CUSTOM_INFO",
+		Title:          "Accepted request for customer",
+		StartTime:      time.Now().UTC().UnixMilli(),
+		EndTime:        time.Now().UTC().UnixMilli(),
+		EntitySelector: fmt.Sprintf("type(easytaxis:smart_taxi),TaxiID(%d)", t.GetId()),
+		Properties: map[string]string{
+			"TaxiID":  fmt.Sprintf("%d", t.GetId()),
+			"FleetID": fmt.Sprintf("%d", t.GetFleetID()),
+		},
+	}
+	eventEncoded, _ := json.Marshal(eventRaw)
+	return eventEncoded
+}
 
-func NewTaxi(id int, class string, fleet int) Taxi {
+func NewTaxi(id int, class string, fleet int, reg string) Taxi {
 	return &taxiImpl{
 		id:             id,
 		class:          class,
@@ -75,5 +114,6 @@ func NewTaxi(id int, class string, fleet int) Taxi {
 		speed:          0,
 		engineTemp:     90,
 		daysToRevision: 365,
+		registration:   reg,
 	}
 }
